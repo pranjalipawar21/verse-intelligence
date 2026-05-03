@@ -8,8 +8,6 @@ app_port: 5000
 pinned: false
 ---
 
-# Verse Intelligence — Neural Poetry Translation
+# Verse Intelligence - Neural Poetry Translation
 
-Context-Aware Neural Machine Translation pipeline for poetry.
-
-Supports English, Hindi, Marathi, French, German, Spanish and more.
+Context-Aware Neural Machine Translation for poetry. Supports English, Hindi, Marathi, French, German, Spanish and more.
