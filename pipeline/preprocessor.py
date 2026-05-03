@@ -65,7 +65,7 @@ class Preprocessor:
         filtered_tokens = [t for t in tokens if t.lower() not in stop_words
                            and t.isalpha()]
         lemmas          = [lemmatizer.lemmatize(t.lower()) for t in filtered_tokens]
-        pos_tags        = pos_tag(tokens)
+        pos_tags        = pos_tag(tokens, lang='eng')
 
         # ── spaCy pipeline ───────────────────────────────────────────────────
         doc = nlp(text)
