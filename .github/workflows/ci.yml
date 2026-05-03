@@ -1,0 +1,122 @@
+name: CI — Verse Intelligence
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install core dependencies (no large ML models)
+        run: |
+          pip install --upgrade pip
+          pip install flask flask-cors flask-sqlalchemy flask-restx \
+                      nltk spacy vaderSentiment numpy scipy \
+                      gunicorn celery redis
+
+      - name: Download spaCy model
+        run: python -m spacy download en_core_web_sm
+
+      - name: Download NLTK data
+        run: python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('vader_lexicon')"
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 app.py tasks.py pipeline/ models/ --max-line-length=120 --ignore=E501,W503
+
+      - name: Test Flask app starts
+        run: |
+          timeout 15 python -c "
+          from app import app, db
+          with app.app_context():
+              db.create_all()
+          print('✓ App initialised OK')
+          client = app.test_client()
+          r = client.get('/api/system/health')
+          assert r.status_code == 200
+          print('✓ Health check OK')
+          r = client.get('/api/system/languages')
+          assert r.status_code == 200
+          data = r.get_json()
+          assert len(data) >= 10
+          print(f'✓ Languages endpoint OK — {len(data)} pairs')
+          "
+
+      - name: Test preprocessing pipeline
+        run: |
+          python -c "
+          from pipeline.preprocessor import Preprocessor
+          p = Preprocessor()
+          result = p.process('Two roads diverged in a yellow wood')
+          assert 'tokens' in result
+          assert 'pos_tags' in result
+          assert result['token_count'] > 0
+          print(f'✓ Preprocessor OK — {result[\"token_count\"]} tokens')
+          "
+
+      - name: Test evaluator
+        run: |
+          python -c "
+          import numpy as np
+          from pipeline.evaluator import Evaluator
+          e = Evaluator()
+          a = np.random.rand(384).astype(np.float32)
+          b = np.random.rand(384).astype(np.float32)
+          m = e.evaluate('hello world', 'bonjour monde', a, b)
+          assert 'cosine_similarity' in m
+          assert 'bleu_score' in m
+          assert 'semantic_drift' in m
+          print(f'✓ Evaluator OK — cosine={m[\"cosine_similarity\"]:.4f}')
+          "
+
+      - name: Test sentiment analysis
+        run: |
+          python -c "
+          from pipeline.sentiment import SentimentAnalyzer
+          sa = SentimentAnalyzer()
+          r = sa.analyze('I love this beautiful poem')
+          assert 'label' in r
+          assert 'compound' in r
+          print(f'✓ Sentiment OK — label={r[\"label\"]}, compound={r[\"compound\"]}')
+          "
+
+      - name: Test DB model
+        run: |
+          python -c "
+          from app import app, db, Translation
+          with app.app_context():
+              db.create_all()
+              r = Translation.query.count()
+              print(f'✓ DB OK — {r} existing records')
+          "
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t verse-intelligence:test .
+      - name: Test Docker container starts
+        run: |
+          docker run -d --name vi_test -p 5000:5000 verse-intelligence:test
+          sleep 10
+          curl -f http://localhost:5000/api/system/health || (docker logs vi_test && exit 1)
+          docker stop vi_test
+          echo "✓ Docker container started and health check passed"

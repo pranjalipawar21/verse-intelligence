@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verse Intelligence — Neural Poetry Translation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-mark">VI</span>
+        <div>
+          <div class="logo-title">Verse Intelligence</div>
+          <div class="logo-sub">Neural Poetry Translation</div>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="#translate" class="nav-link active">Translate</a>
+        <a href="#metrics"   class="nav-link">Metrics</a>
+        <a href="#pipeline"  class="nav-link">Pipeline</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <span></span> Multi-Engine NMT · mBART-50 · NLLB-200 · MarianMT
+        </div>
+        <h1>
+          Translate Poetry<br/>
+          <span class="grad">with Soul Intact</span>
+        </h1>
+        <p class="hero-sub">
+          Preserves emotional tone, metaphor &amp; rhythm across languages —
+          English, Hindi, Marathi and beyond.
+        </p>
+        <div class="hero-pills">
+          <span class="pill">BLEU Score</span>
+          <span class="pill">BERTScore</span>
+          <span class="pill">Cosine Similarity</span>
+          <span class="pill">Sentiment Drift</span>
+          <span class="pill">BiLSTM + Attention</span>
+          <span class="pill">RAG</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Translation Panel ─────────────────────────────────────────────── -->
+    <section id="translate" class="container">
+      <div class="section-eyebrow">
+        <span class="section-tag">01 · Translate</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="section-title">Your Poem</div>
+
+      <div class="panel-grid">
+
+        <!-- ── Input Card ─────────────────────────────────────────────── -->
+        <div class="card">
+
+          <div class="form-group">
+            <label class="field-label">Language Pair</label>
+            <div class="select-wrap">
+              <select id="langPair">
+                <optgroup label="🇮🇳 Indic — mBART-50 / NLLB-200">
+                  <option value="en-hi">English → Hindi (हिन्दी)</option>
+                  <option value="en-mr">English → Marathi (मराठी)</option>
+                  <option value="hi-en">Hindi → English</option>
+                  <option value="mr-en">Marathi → English</option>
+                  <option value="hi-mr">Hindi → Marathi</option>
+                  <option value="mr-hi">Marathi → Hindi</option>
+                </optgroup>
+                <optgroup label="🌍 European — MarianMT">
+                  <option value="en-fr">English → French</option>
+                  <option value="en-de">English → German</option>
+                  <option value="en-es">English → Spanish</option>
+                  <option value="en-it">English → Italian</option>
+                  <option value="en-ro">English → Romanian</option>
+                  <option value="en-zh">English → Chinese</option>
+                  <option value="fr-en">French → English</option>
+                  <option value="de-en">German → English</option>
+                  <option value="es-en">Spanish → English</option>
+                  <option value="it-en">Italian → English</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="engine-badge" id="engineBadge">mBART-50</div>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Mode</label>
+            <div class="mode-toggle">
+              <button class="mode-btn active" data-mode="literal">Literal</button>
+              <button class="mode-btn" data-mode="context_aware">✦ Context-Aware</button>
+            </div>
+          </div>
+
+          <div class="form-group" id="apiKeyGroup" style="display:none">
+            <label class="field-label">API Key (OpenAI or Anthropic)</label>
+            <input type="password" id="apiKey" class="text-input" placeholder="sk-… or sk-ant-…" />
+            <div class="field-hint">LLM enhancement only. Never stored.</div>
+          </div>
+
+          <div class="form-group">
+            <div class="toggle-row">
+              <input type="checkbox" id="useRag" />
+              <label for="useRag" class="toggle-label">Enable RAG (style retrieval)</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Poem</label>
+            <textarea id="poemInput" class="poem-textarea"
+              placeholder="Enter your poem here…&#10;&#10;Two roads diverged in a yellow wood,&#10;And sorry I could not travel both…"></textarea>
+          </div>
+
+          <button id="translateBtn" class="cta-btn">
+            <span>Translate Poem</span>
+            <span>→</span>
+          </button>
+
+          <div class="sample-poems">
+            <div class="field-label">Quick Load</div>
+            <div class="sample-chips">
+              <button class="chip" data-poem="frost">Frost · EN</button>
+              <button class="chip" data-poem="keats">Keats · EN</button>
+              <button class="chip" data-poem="tagore">Tagore · EN</button>
+              <button class="chip" data-poem="kabir_hi">Kabir · HI</button>
+              <button class="chip" data-poem="tukaram_mr">Tukaram · MR</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Output Card ────────────────────────────────────────────── -->
+        <div class="card" style="min-height:400px">
+
+          <div class="model-warning" id="modelWarning">
+            ⚠ <strong>First run:</strong> Hindi (mBART-50 ~2.3 GB) and Marathi (NLLB-200 ~2.4 GB)
+            download once, then cache locally. Allow 2–5 min on first use.
+          </div>
+
+          <div class="output-placeholder" id="outputPlaceholder">
+            <div class="placeholder-icon">✦</div>
+            <p>Translation will appear here</p>
+          </div>
+
+          <div id="results" style="display:none">
+            <div class="section-tag" style="margin-bottom:0.75rem">Output</div>
+
+            <div class="result-tabs">
+              <button class="tab-btn active" data-tab="raw">Raw NMT</button>
+              <button class="tab-btn" data-tab="enhanced">✦ LLM Enhanced</button>
+            </div>
+
+            <div class="translation-box" id="tabRaw">
+              <div class="trans-label" id="transEngine">MarianMT · Raw Translation</div>
+              <div class="trans-text" id="rawTranslation"></div>
+            </div>
+            <div class="translation-box" id="tabEnhanced" style="display:none">
+              <div class="trans-label">LLM · Context-Aware Enhanced</div>
+              <div class="trans-text" id="enhancedTranslation"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Metrics ───────────────────────────────────────────────────────── -->
+    <section id="metrics" class="container metrics-section" style="display:none">
+      <div class="section-eyebrow">
+        <span class="section-tag">02 · Evaluation</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="section-title">Quality Metrics</div>
+
+      <div class="metrics-grid">
+        <div class="metric-card" id="mcCosine">
+          <div class="metric-name">Cosine Similarity</div>
+          <div class="metric-value" id="cosineVal">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="cosineFill"></div></div>
+          <div class="metric-desc">Embedding-space alignment</div>
+        </div>
+        <div class="metric-card" id="mcBleu">
+          <div class="metric-name">BLEU Score</div>
+          <div class="metric-value" id="bleuVal">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="bleuFill"></div></div>
+          <div class="metric-desc">n-gram lexical overlap</div>
+        </div>
+        <div class="metric-card" id="mcBert">
+          <div class="metric-name">BERTScore F1</div>
+          <div class="metric-value" id="bertVal">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="bertFill"></div></div>
+          <div class="metric-desc">Contextual token similarity</div>
+        </div>
+        <div class="metric-card" id="mcDrift">
+          <div class="metric-name">Semantic Drift</div>
+          <div class="metric-value" id="driftVal">—</div>
+          <div class="metric-bar"><div class="metric-fill" id="driftFill"></div></div>
+          <div class="metric-desc">Embedding-vector divergence</div>
+        </div>
+      </div>
+
+      <div class="sentiment-section">
+        <div class="sub-title">Sentiment Comparison</div>
+        <div class="sentiment-grid">
+          <div class="sentiment-card">
+            <div class="sent-label">Original</div>
+            <div class="sent-emotion" id="sentOrigEmotion">—</div>
+            <div class="sent-score" id="sentOrigScore">compound: —</div>
+            <canvas id="chartOrig" width="180" height="180"></canvas>
+          </div>
+          <div class="sentiment-divider">
+            <div class="drift-badge" id="driftBadge">—</div>
+            <div class="drift-label">Sentiment Drift</div>
+          </div>
+          <div class="sentiment-card">
+            <div class="sent-label">Translated</div>
+            <div class="sent-emotion" id="sentTransEmotion">—</div>
+            <div class="sent-score" id="sentTransScore">compound: —</div>
+            <canvas id="chartTrans" width="180" height="180"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Pipeline ──────────────────────────────────────────────────────── -->
+    <section id="pipeline" class="container" style="display:none">
+      <div class="section-eyebrow">
+        <span class="section-tag">03 · Preprocessing</span>
+        <div class="section-line"></div>
+      </div>
+      <div class="section-title">Linguistic Analysis</div>
+      <div class="pipeline-stages">
+        <div class="stage-card">
+          <div class="stage-num">01</div>
+          <div class="stage-name">Tokens</div>
+          <div class="stage-content" id="stageTokens">—</div>
+        </div>
+        <div class="stage-card">
+          <div class="stage-num">02</div>
+          <div class="stage-name">POS Tags</div>
+          <div class="stage-content" id="stagePOS">—</div>
+        </div>
+        <div class="stage-card">
+          <div class="stage-num">03</div>
+          <div class="stage-name">Lemmas</div>
+          <div class="stage-content" id="stageLemmas">—</div>
+        </div>
+        <div class="stage-card">
+          <div class="stage-num">04</div>
+          <div class="stage-name">Named Entities</div>
+          <div class="stage-content" id="stageNER">—</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Loading Overlay ───────────────────────────────────────────────────── -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none">
+    <div class="loading-inner">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Translating…</div>
+      <div class="loading-stages">
+        <div class="ls" id="ls1">① Preprocessing · NLTK + spaCy</div>
+        <div class="ls" id="ls2">② Neural Translation</div>
+        <div class="ls" id="ls3">③ Embedding · Sentence-BERT</div>
+        <div class="ls" id="ls4">④ LLM Enhancement</div>
+        <div class="ls" id="ls5">⑤ Evaluation Metrics</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

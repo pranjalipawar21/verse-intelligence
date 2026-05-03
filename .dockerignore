@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.git/
+.github/
+*.ipynb
+notebooks/
+instance/
+*.db
+*.pt
+*.bin
+.DS_Store
+Thumbs.db

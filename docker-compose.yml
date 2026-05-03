@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+
+  # ── Redis (message broker for Celery) ──────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── Flask Web App ───────────────────────────────────────────────────────────
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////app/instance/translations.db
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+      - db_data:/app/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker (handles async translation tasks) ─────────────────────────
+  worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A tasks worker --loglevel=info --concurrency=1 --max-tasks-per-child=5
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////app/instance/translations.db
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+      - db_data:/app/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  huggingface_cache:   # persists downloaded HuggingFace models between restarts
+  db_data:             # persists SQLite translation history
